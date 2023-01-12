@@ -130,15 +130,13 @@ class edaDF:
         out2 = widgets.Output()
         out3 = widgets.Output()
         out4 = widgets.Output()
-        out5 = widgets.Output()
 
-        tab = widgets.Tab(children = [out1, out2, out3, out4, out5])
+        tab = widgets.Tab(children = [out1, out2, out3, out4])
         tab.set_title(0, 'Info')
         tab.set_title(1, 'Categorical')
         tab.set_title(2, 'Numerical')
-        tab.set_title(3, 'Pairplot')
-        tab.set_title(4, 'Averages')
-        widgets.display(tab)
+        tab.set_title(3, 'Averages')
+        #widgets.display(tab)
 
         with out1:
             self.info()
@@ -152,14 +150,6 @@ class edaDF:
             plt.show(fig3)
         
         with out4:
-            if len(self.cat) != 0:
-                fig4 = sns.pairplot(self.data[self.cat])
-                plt.show(fig4)
-            if len(self.num) != 0:
-                fig4_1 = sns.pairplot(self.data[self.num])
-                plt.show(fig4_1)
-        
-        with out5:
-            self.data.describe()
-            self.data.value_counts()
+            print(self.data.describe())
+            print(self.data.value_counts())
             
