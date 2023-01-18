@@ -73,6 +73,8 @@ class edaDF:
         self.target = target
         self.cat = []
         self.num = []
+        self.autoFeatures()
+        self.outliers = self.outlierCounter()
 
     def info(self):
         return self.data.info()
@@ -86,10 +88,17 @@ class edaDF:
     def setNum(self, numList):
         self.num = numList
 
+    def debug(self):
+        print('Debuggerating')
+
+    def autoFeatures(self):
+        self.cat = list(self.data.select_dtypes(['object', 'category']).columns.values)
+        self.num = list(self.data.select_dtypes(['int64', 'float64']).columns.values)
+
     def countPlots(self, splitTarg=False, show=True):
         n = len(self.cat)
         cols = 2
-        figure, ax = plt.subplots(math.ceil(n/cols), cols)
+        figure, ax = plt.subplots(math.ceil(n/cols), cols, figsize=(20,20), gridspec_kw={'wspace': 0.3})
         r = 0
         c = 0
         for col in self.cat:
@@ -102,13 +111,14 @@ class edaDF:
                 r += 1
                 c = 0
         if show == True:
+            figure.tight_layout()
             figure.show()
         return figure
 
     def histPlots(self, kde=True, splitTarg=False, show=True):
         n = len(self.num)
         cols = 2
-        figure, ax = plt.subplots(math.ceil(n/cols), cols)
+        figure, ax = plt.subplots(math.ceil(n/cols), cols, figsize=(20,20), gridspec_kw={'wspace': 0.3})
         r = 0
         c = 0
         for col in self.num:
@@ -122,24 +132,52 @@ class edaDF:
                 r += 1
                 c = 0
         if show == True:
+            figure.tight_layout()
             figure.show()
         return figure
+
+    def outlierCounter(self):
+        outliers = pd.DataFrame(columns=["Feature", "Low Outliers", "High Outliers"])
+        for col in self.num:
+            lo = 0
+            ho = 0
+            loweval = self.data[col].quantile(0.25)*0.1
+            higheval = self.data[col].quantile(0.75)*10
+            if higheval == 0:
+                higheval = 1
+            for i in self.data[col]:
+                if i < loweval and i != 0:
+                    lo+=1
+                if i >= higheval:
+                    ho+=1
+            outliers = pd.concat([outliers,pd.Series({"Feature":col,"Low Outliers":lo,"High Outliers":ho}).to_frame().T], ignore_index=True)
+        return outliers
 
     def fullEDA(self):
         out1 = widgets.Output()
         out2 = widgets.Output()
         out3 = widgets.Output()
         out4 = widgets.Output()
+        out5 = widgets.Output()
+        out6 = widgets.Output()
+        out7 = widgets.Output()
+        out8 = widgets.Output()
+        out9 = widgets.Output()
 
-        tab = widgets.Tab(children = [out1, out2, out3, out4])
-        tab.set_title(0, 'Info')
-        tab.set_title(1, 'Categorical')
-        tab.set_title(2, 'Numerical')
-        tab.set_title(3, 'Averages')
-        #widgets.display(tab)
+        tab = widgets.Tab(children=[out1,out2,out3,out4,out5,out6,out7,out8,out9])
+        tab.set_title(0,"Info")
+        tab.set_title(1,"Categorical")
+        tab.set_title(2,"Numerical")
+        tab.set_title(3,"Pairplot")
+        tab.set_title(4,"Descriptive Stats")
+        tab.set_title(5,"Value Counts")
+        tab.set_title(6,"Correlations")
+        tab.set_title(7,"Missing Values")
+        tab.set_title(8,"Outlier Counts")
+        display(tab)
 
         with out1:
-            self.info()
+            display(pd.DataFrame(self.info()))
 
         with out2:
             fig2 = self.countPlots(splitTarg=True, show=False)
@@ -148,8 +186,30 @@ class edaDF:
         with out3:
             fig3 = self.histPlots(kde=True, show=False)
             plt.show(fig3)
-        
+
         with out4:
-            print(self.data.describe())
-            print(self.data.value_counts())
-            
+            fig4 = sns.pairplot(self.data)
+            plt.show(fig4)
+        
+        with out5:
+            display(pd.DataFrame(self.data.describe()))
+
+        with out6:
+            for col in self.cat:
+                display(pd.DataFrame(self.data[col].value_counts()))
+                print('\n')
+
+        with out7:
+            corr = self.data.corr()
+            heat = sns.heatmap(corr, annot=True)
+            plt.show(heat)
+
+        with out8:
+            display(pd.DataFrame(self.data.isnull().sum()))
+
+        with out9:
+            print("These outliers are calculated by taking powers of 10 of the 25th and 75th quartiles, and are a guideline only")
+            display(self.outliers)
+            #outlier counts, low and high
+            #create table, each row is a column from the data
+            #count number of outliers based on some measure below/above 25/75 quartile
