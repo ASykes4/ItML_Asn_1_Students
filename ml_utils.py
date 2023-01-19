@@ -26,6 +26,8 @@ class edaDF:
         a list of the names of the categorical columns
     num : list
         a list of the names of the numerical columns
+    outliers : pandas DataFrame
+        a DataFrame containing rows that correspond to each column with the low and high outliers naively generated 
 
     Methods
     -------
@@ -65,6 +67,14 @@ class edaDF:
         show : bool
             If true, display the graphs when the function is called. Otherwise the figure is returned. 
 
+    autoFeatures()
+        fills the cat and num variables with proper feature lists by dynamically obtaining rows that are 
+        category or object for cat, and int64 and float64 for num.
+
+    outlierCounter()
+        generates the DataFrame of outliers. It calculates the outliers by taking the power of 10 lower than the 
+        25th quartile as its low cutoff and the power of 10 higher than the 75th quartile as its high cutoff.
+
     fullEDA()
         Displays the full EDA process. 
     """
@@ -92,49 +102,59 @@ class edaDF:
         print('Debuggerating')
 
     def autoFeatures(self):
-        self.cat = list(self.data.select_dtypes(['object', 'category']).columns.values)
-        self.num = list(self.data.select_dtypes(['int64', 'float64']).columns.values)
+        self.cat = list(self.data.select_dtypes(['object', 'category']).columns)
+        self.num = list(self.data.select_dtypes(['int64', 'float64']).columns)
+        if self.cat.count(self.target) > 0:
+            self.cat.remove(self.target)
+        if self.num.count(self.target) > 0:
+            self.num.remove(self.target)
 
     def countPlots(self, splitTarg=False, show=True):
         n = len(self.cat)
         cols = 2
-        figure, ax = plt.subplots(math.ceil(n/cols), cols, figsize=(20,20), gridspec_kw={'wspace': 0.3})
-        r = 0
-        c = 0
-        for col in self.cat:
-            if splitTarg == False:
-                sns.countplot(data=self.data, x=col, ax=ax[r][c])
-            if splitTarg == True:
-                sns.countplot(data=self.data, x=col, hue=self.target, ax=ax[r][c])
-            c += 1
-            if c == cols:
-                r += 1
-                c = 0
-        if show == True:
-            figure.tight_layout()
-            figure.show()
-        return figure
+        if n != 0:
+            figure, ax = plt.subplots(math.ceil(n/cols), cols, figsize=(20,20))
+            r = 0
+            c = 0
+            for col in self.cat:
+                if splitTarg == False:
+                    sns.countplot(data=self.data, x=col, ax=ax[r][c])
+                if splitTarg == True:
+                    sns.countplot(data=self.data, x=col, hue=self.target, ax=ax[r][c])
+                c += 1
+                if c == cols:
+                    r += 1
+                    c = 0
+            if show == True:
+                figure.tight_layout()
+                figure.show()
+            return figure
+        else:
+            print("No categorical features in the data.")
 
     def histPlots(self, kde=True, splitTarg=False, show=True):
         n = len(self.num)
         cols = 2
-        figure, ax = plt.subplots(math.ceil(n/cols), cols, figsize=(20,20), gridspec_kw={'wspace': 0.3})
-        r = 0
-        c = 0
-        for col in self.num:
-            #print("r:",r,"c:",c)
-            if splitTarg == False:
-                sns.histplot(data=self.data, x=col, kde=kde, ax=ax[r][c])
-            if splitTarg == True:
-                sns.histplot(data=self.data, x=col, hue=self.target, kde=kde, ax=ax[r][c])
-            c += 1
-            if c == cols:
-                r += 1
-                c = 0
-        if show == True:
-            figure.tight_layout()
-            figure.show()
-        return figure
+        if n != 0:
+            figure, ax = plt.subplots(math.ceil(n/cols), cols, figsize=(20,20))
+            r = 0
+            c = 0
+            for col in self.num:
+                #print("r:",r,"c:",c)
+                if splitTarg == False:
+                    sns.histplot(data=self.data, x=col, kde=kde, ax=ax[r][c])
+                if splitTarg == True:
+                    sns.histplot(data=self.data, x=col, hue=self.target, kde=kde, ax=ax[r][c])
+                c += 1
+                if c == cols:
+                    r += 1
+                    c = 0
+            if show == True:
+                figure.tight_layout()
+                figure.show()
+            return figure
+        else:
+            print("No numerical features in the data.")
 
     def outlierCounter(self):
         outliers = pd.DataFrame(columns=["Feature", "Low Outliers", "High Outliers"])
@@ -168,12 +188,12 @@ class edaDF:
         tab.set_title(0,"Info")
         tab.set_title(1,"Categorical")
         tab.set_title(2,"Numerical")
-        tab.set_title(3,"Pairplot")
+        tab.set_title(3,"Outlier Counts")
         tab.set_title(4,"Descriptive Stats")
         tab.set_title(5,"Value Counts")
         tab.set_title(6,"Correlations")
         tab.set_title(7,"Missing Values")
-        tab.set_title(8,"Outlier Counts")
+        tab.set_title(8,"Pairplot")
         display(tab)
 
         with out1:
@@ -187,7 +207,7 @@ class edaDF:
             fig3 = self.histPlots(kde=True, show=False)
             plt.show(fig3)
 
-        with out4:
+        with out9:
             fig4 = sns.pairplot(self.data)
             plt.show(fig4)
         
@@ -207,9 +227,6 @@ class edaDF:
         with out8:
             display(pd.DataFrame(self.data.isnull().sum()))
 
-        with out9:
+        with out4:
             print("These outliers are calculated by taking powers of 10 of the 25th and 75th quartiles, and are a guideline only")
             display(self.outliers)
-            #outlier counts, low and high
-            #create table, each row is a column from the data
-            #count number of outliers based on some measure below/above 25/75 quartile
